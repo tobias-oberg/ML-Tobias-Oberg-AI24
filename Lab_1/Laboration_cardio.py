@@ -20,10 +20,12 @@ class DiseasePrediction:
 
     def load_data(self):
         df = pd.read_csv(r"C:\Code\ML-Tobias-Oberg-AI24\Lab_1\cardio_train.csv", sep=";")
-        
+        df.dropna()
+
         df["gender"] = df["gender"].replace({1: "female", 2: "male"})
         df["cholesterol"] = df["cholesterol"].replace({1: "normal", 2: "above normal", 3: "well above normal"})
         df["cardio"] = df["cardio"].replace({0: "Negative", 1: "Positive"})
+        df["age"] = (df["age"] / 365).astype(int) # gör om age till år istället för dagar, int för hela år
 
         return df
 
@@ -45,14 +47,14 @@ class DiseasePrediction:
 
     def plot_age_distribution(self):
         plt.figure(figsize=(8,5))
-        sns.histplot(data= self.df, x="age", hue="gender", kde=True)
+        sns.histplot(data= self.df, x="age", hue="gender",kde=True, bins=30, multiple="dodge")
         plt.title("Age Distribution by Gender")
         plt.show()
 
 
     def number_of_smokers(self):
         plt.figure(figsize=(8,5))
-        sns.histplot(data=self.df, x="age", hue="gender", kde=True)
+        sns.histplot(data=self.df, x="age", hue="gender", bins=40, kde=True, multiple="dodge")
         plt.title("Distribution of smokers")
 
         number_of_smokers = self.df.groupby("smoke").size()
@@ -63,7 +65,7 @@ class DiseasePrediction:
 
     def weight_distribution(self):
         plt.figure(figsize=(8,5))
-        sns.histplot(x="weight", data=self.df, hue="gender", bins=20, kde=True)
+        sns.histplot(x="weight", data=self.df, hue="gender", bins=30, multiple="dodge")
         plt.xlabel("Weight (kg)")
         plt.title("Weight Distribution")
         plt.show()
@@ -71,7 +73,7 @@ class DiseasePrediction:
 
     def height_distribution(self):
         plt.figure(figsize=(8,5))
-        sns.histplot(x="height", data=self.df, hue="gender", bins=20, kde=True)
+        sns.histplot(x="height", data=self.df, hue="gender", bins=30, multiple="dodge")
         plt.xlabel("Height (cm)")
         plt.title("Height Distribution")
         plt.show()
@@ -91,7 +93,7 @@ class DiseasePrediction:
 
 
 
-    def feature_engineer_bmi():    # weight / height x height
+    def feature_engineer_bmi(self):    # weight / height x height
         pass
 
 
@@ -105,7 +107,7 @@ class DiseasePrediction:
 
 
     def visualize_diseases():
-        pass
+        pass # subplots
 
 
 

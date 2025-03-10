@@ -94,9 +94,29 @@ class DiseasePrediction:
 
 
     def feature_engineer_bmi(self):    # weight / height x height
-        pass
+        self.df["height_meters"] = self.df["height"] / 100    # för att omvandla cm till meter
+
+        self.df["BMI"] = self.df["weight"] / (self.df["height_meters"] **2) # weight / height x height
+
+        # lägg till något som tar bort outliers för BMI här, vart går gränsen för outliers eller extremvärden?
 
 
+        def categorize_bmi(BMI):
+            if BMI < 18.5:
+                return "Underweight"
+            elif 18.5 <= BMI <= 24.9:
+                return "Normal BMI"
+            elif 25 <= BMI <= 29.9:
+                return "Overweight"
+            elif 30 <= BMI <= 34.9:
+                return "Obese Class 1"
+            elif 35 <= BMI <= 39.9:
+                return "Obese Class 2"
+            else:
+                return "Obese Class 3"
+
+        self.df["BMI_category"] = self.df["BMI"].apply(categorize_bmi)
+        return self.df
 
 
 

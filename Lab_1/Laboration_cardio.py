@@ -6,10 +6,15 @@ import matplotlib.pyplot as plt
 class DiseasePrediction:
     def __init__(self):
         self.df = self.load_data()
+        self.feature_engineer_bmi()
+        self.feature_engineer_bp()
+        self.correlation_heat_map()
 
 
     def perform_eda(self):
-        self.EDA()
+        print(self.df.describe())
+        print(self.df.info())
+        print(self.df.value_counts("cardio")) # Visar antalet positiva & negativa med hjärt och kärlsjukdom
         self.piechart_cholesterol()
         self.plot_age_distribution()
         self.number_of_smokers()
@@ -28,12 +33,6 @@ class DiseasePrediction:
         df["age"] = (df["age"] / 365).astype(int) # gör om age till år istället för dagar, int för hela år
 
         return df
-
-
-    def EDA(self):
-        print(self.df.describe())
-        print(self.df.info())
-        print(self.df.value_counts("cardio")) # Visar antalet positiva & negativa med hjärt och kärlsjukdom
 
 
     def piechart_cholesterol(self):
@@ -94,13 +93,11 @@ class DiseasePrediction:
 
 
     def feature_engineer_bmi(self):    # weight / height x height
-        self.df["height_meters"] = self.df["height"] / 100    # för att omvandla cm till meter
-
-        self.df["BMI"] = self.df["weight"] / (self.df["height_meters"] **2) # weight / height x height
-
-        # lägg till något som tar bort outliers för BMI här, vart går gränsen för outliers eller extremvärden?
+        self.df["BMI"] = self.df["weight"] / ((self.df["height"] / 100) ** 2) # / 100 för att omvandla cm till meter
+         # weight / height x height
 
 
+        # BMI-värden tagna från WHO
         def categorize_bmi(BMI):
             if BMI < 18.5:
                 return "Underweight"
@@ -115,6 +112,10 @@ class DiseasePrediction:
             else:
                 return "Obese Class 3"
 
+
+
+        # filtrerar bort BMI under eller = 10, filtrerar bort BMI = 50 eller under
+        self.df = self.df[(self.df["BMI"] >= 10) & (self.df["BMI"] <= 50)]
         self.df["BMI_category"] = self.df["BMI"].apply(categorize_bmi)
         return self.df
 
@@ -122,8 +123,23 @@ class DiseasePrediction:
 
 
 
-    def feature_engineer_bp():
-        pass
+    def feature_engineer_bp(self):
+        def categorize_bp(ap_hi, ap_lo):
+            if ap_hi < 90 or ap_lo < 60:
+                return "Low Blood Pressure"
+            elif 90 <= ap_hi <= 120 and 60 <= ap_lo <= 80:
+                return "Normal Blood Pressure"
+            elif 120 <= ap_hi <= 129 and ap_lo < 80:
+                return "Elevated Blood Pressure"
+            elif 130 <= ap_hi <= 139 or 80 <= ap_lo <= 89:
+                return "Hypertension Stage 1"
+            elif 140 <= ap_hi <= 179 or 90 <= ap_lo <= 119:
+                return "Hypertension Stage 2"
+            elif ap_hi >= 180 or ap_lo >= 120:
+                return "Hypertensive Crisis"
+            
+        self.df["Blood_pressure_category"] = self.df.apply(lambda row: categorize_bp(row["ap_hi"], row["ap_lo"]), axis=1)
+        return self.df
 
 
     def visualize_diseases():
@@ -131,8 +147,16 @@ class DiseasePrediction:
 
 
 
-    def correlation_heat_map():
+    def correlation_heat_map(self):
+        plt.figure(figsize=(10,5))
+        sns.heatmap(self.df.corr(numeric_only=True), annot=True)
+        plt.show()
+
+
+    def copy_of_df():
         pass
+    # skapa kopia av dataset här och utför one-hot encoding samt släng vissa kolumner
+
 
 
     def confusion_matrix():

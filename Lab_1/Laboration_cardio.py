@@ -8,7 +8,8 @@ class DiseasePrediction:
         self.df = self.load_data()
         self.feature_engineer_bmi()
         self.feature_engineer_bp()
-        self.correlation_heat_map()
+        
+        
 
 
     def perform_eda(self):

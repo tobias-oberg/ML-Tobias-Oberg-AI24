@@ -8,6 +8,7 @@ class DiseasePrediction:
         self.df = self.load_data()
         self.feature_engineer_bmi()
         self.feature_engineer_bp()
+       
         
         
 
@@ -28,9 +29,9 @@ class DiseasePrediction:
         df = pd.read_csv(r"C:\Code\ML-Tobias-Oberg-AI24\Lab_1\cardio_train.csv", sep=";")
         df.dropna()
 
-        df["gender"] = df["gender"].replace({1: "female", 2: "male"})
-        df["cholesterol"] = df["cholesterol"].replace({1: "normal", 2: "above normal", 3: "well above normal"})
-        df["cardio"] = df["cardio"].replace({0: "Negative", 1: "Positive"})
+        df["gender"] = df["gender"].map({1: "female", 2: "male"})
+        df["cholesterol"] = df["cholesterol"].map({1: "normal", 2: "above normal", 3: "well above normal"})
+        df["cardio"] = df["cardio"].map({0: "Negative", 1: "Positive"})
         df["age"] = (df["age"] / 365).astype(int) # gör om age till år istället för dagar, int för hela år
 
         return df
@@ -115,8 +116,8 @@ class DiseasePrediction:
 
 
 
-        # filtrerar bort BMI under eller = 10, filtrerar bort BMI = 50 eller under
-        self.df = self.df[(self.df["BMI"] >= 10) & (self.df["BMI"] <= 50)]
+        # filtrerar bort BMI under eller = 10, filtrerar bort BMI = 60 eller under
+        self.df = self.df[(self.df["BMI"] >= 10) & (self.df["BMI"] <= 60)]
         self.df["BMI_category"] = self.df["BMI"].apply(categorize_bmi)
         return self.df
 
@@ -124,7 +125,24 @@ class DiseasePrediction:
 
 
 
-    def feature_engineer_bp(self):
+    def feature_engineer_bp(self): 
+        Q1 = self.df[["ap_hi", "ap_lo"]].quantile(0.25) 
+        Q3 = self.df[["ap_hi", "ap_lo"]].quantile(0.75) 
+        IQR = Q3 - Q1
+
+        lower_bound = Q1 - 1.5 * IQR
+        upper_bound = Q3 + 1.5 * IQR
+
+        mask = ~((self.df[["ap_hi", "ap_lo"]] < lower_bound) | (self.df[["ap_hi", "ap_lo"]] > upper_bound)).any(axis=1)
+            
+        self.df = self.df[mask]
+            
+        # Ville testa en annan metod för att ta bort outliers, svårt att avgöra gränserna själv.
+        # Använde mig av samma metod i E03 logistic_regression.
+        # Källa: https://www.geeksforgeeks.org/how-to-use-pandas-filter-with-iqr/
+        
+        
+        
         def categorize_bp(ap_hi, ap_lo):
             if ap_hi < 90 or ap_lo < 60:
                 return "Low Blood Pressure"
@@ -143,8 +161,55 @@ class DiseasePrediction:
         return self.df
 
 
-    def visualize_diseases():
-        pass # subplots
+
+    def visualize_diseases(self):
+        fig, axes = plt.subplots(2, 2, figsize=(18, 12))
+
+        self.df["cardio"] = self.df["cardio"].map({"Positive": 1, "Negative": 0}).astype(int) # omvandlar tillbaka "cardio" till numeriska värden så att jag kan köra .mean(). Inte den snyggaste lösningen.
+
+        # Beräkna andelen positiva fall för olika kategorier
+        blodtryck_andel = self.df.groupby("Blood_pressure_category")["cardio"].mean().reset_index()
+        bmi_andel = self.df.groupby("BMI_category")["cardio"].mean().reset_index()
+        kolesterol_andel = self.df.groupby("cholesterol")["cardio"].mean().reset_index()
+        aktivitet_andel = self.df.groupby("active")["cardio"].mean().reset_index()
+
+
+        def add_percentage_labels(ax, data): # ChatGPT4, prompt: Hjälp mig skapa procent direkt på varje bar. Fick denna funktionen som respons. Jag ville ha mer tydlighet i subplotsen.
+            for p in ax.patches:
+                height = p.get_height()
+                percentage = height * 100
+                ax.text(p.get_x() + p.get_width() / 2., height + 0.01, f'{percentage:.1f}%', ha='center', va='bottom') #
+
+      
+        sns.barplot(x="Blood_pressure_category", y="cardio", data=blodtryck_andel, ax=axes[0, 0], hue="Blood_pressure_category", palette="viridis", legend=False)
+        axes[0, 0].set_title("Positive cases by Blood Pressure Category")
+        axes[0, 0].set_xlabel("Blood Pressure Category")
+        axes[0, 0].set_ylabel("Proportion of Positive Cases")
+        add_percentage_labels(axes[0, 0], blodtryck_andel)
+
+        sns.barplot(x="BMI_category", y="cardio", data=bmi_andel, ax=axes[0, 1], hue="BMI_category", palette="magma", legend=False)
+        axes[0, 1].set_title("Positive cases by BMI Category")
+        axes[0, 1].set_xlabel("BMI Category")
+        axes[0, 1].set_ylabel("Proportion of Positive Cases")
+        add_percentage_labels(axes[0, 1], bmi_andel)
+        
+
+        sns.barplot(x="cholesterol", y="cardio", data=kolesterol_andel, ax=axes[1, 0], hue= "cholesterol",palette="plasma", legend=False)
+        axes[1, 0].set_title("Positive cases by Cholesterol Level")
+        axes[1, 0].set_xlabel("Cholesterol Level")
+        axes[1, 0].set_ylabel("Proportion of Positive Cases")
+        add_percentage_labels(axes[1, 0], kolesterol_andel)
+
+
+        sns.barplot(x="active", y="cardio", data=aktivitet_andel, ax=axes[1, 1], hue="active", palette="cividis", legend=False)
+        axes[1, 1].set_title("Positive cases by Activity Level")
+        axes[1, 1].set_xlabel("Activity Level")
+        axes[1, 1].set_ylabel("Proportion of Positive Cases")
+        add_percentage_labels(axes[1, 1], aktivitet_andel)
+
+        
+        plt.tight_layout()
+        plt.show()
 
 
 
@@ -154,11 +219,24 @@ class DiseasePrediction:
         plt.show()
 
 
-    def copy_of_df():
-        pass
+    def copy_of_df(self):
+        self.df1 = self.df.copy()
+        self.df1 = self.df.drop(columns=["ap_hi", "ap_lo", "height", "weight", "BMI"])
+        self.df1 = pd.get_dummies(self.df1, columns=["BMI_category", "Blood_pressure_category", "gender"],drop_first=True, dtype=int)
+
+
+        self.df2 = self.df.copy()
+        self.df2 = self.df.drop(columns=["BMI_category", "Blood_pressure_category", "height", "weight"])
+        self.df2 = pd.get_dummies(self.df2, columns=["gender"], drop_first=True, dtype=int)
+
+        print(self.df1.head())
+        print(self.df2.head())
     # skapa kopia av dataset här och utför one-hot encoding samt släng vissa kolumner
 
 
+
+
+    
 
     def confusion_matrix():
         from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix

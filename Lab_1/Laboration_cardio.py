@@ -2,36 +2,39 @@ import pandas as pd
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix, classification_report, accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, VotingClassifier, GradientBoostingClassifier
+
 
 class DiseasePrediction:
     def __init__(self):
         self.df = self.load_data()
-        self.feature_engineer_bmi()
-        self.feature_engineer_bp()
+        
        
         
-        
 
-
-    def perform_eda(self):
-        print(self.df.describe())
-        print(self.df.info())
-        print(self.df.value_counts("cardio")) # Visar antalet positiva & negativa med hjärt och kärlsjukdom
-        self.piechart_cholesterol()
-        self.plot_age_distribution()
-        self.number_of_smokers()
-        self.weight_distribution()
-        self.height_distribution()
-        self.gender_cardio()
+    # def perform_eda(self):
+    #     # print(self.df.describe())
+    #     # print(self.df.info())
+    #     print(self.df.value_counts("cardio")) # Visar antalet positiva & negativa med hjärt och kärlsjukdom
+    #     self.piechart_cholesterol()
+    #     self.plot_age_distribution()
+    #     self.number_of_smokers()
+    #     self.weight_distribution()
+    #     self.height_distribution()
+    #     self.gender_cardio()
 
 
     def load_data(self):
         df = pd.read_csv(r"C:\Code\ML-Tobias-Oberg-AI24\Lab_1\cardio_train.csv", sep=";")
-        df.dropna()
+        df = df.dropna()
 
-        df["gender"] = df["gender"].map({1: "female", 2: "male"})
-        df["cholesterol"] = df["cholesterol"].map({1: "normal", 2: "above normal", 3: "well above normal"})
-        df["cardio"] = df["cardio"].map({0: "Negative", 1: "Positive"})
+        df["gender"] = df["gender"].replace({1: "female", 2: "male"})
+        df["cholesterol"] = df["cholesterol"].replace({1: "normal", 2: "above normal", 3: "well above normal"})
+        df["cardio"] = df["cardio"].replace({0: "Negative", 1: "Positive"})
         df["age"] = (df["age"] / 365).astype(int) # gör om age till år istället för dagar, int för hela år
 
         return df
@@ -93,7 +96,6 @@ class DiseasePrediction:
 
 
 
-
     def feature_engineer_bmi(self):    # weight / height x height
         self.df["BMI"] = self.df["weight"] / ((self.df["height"] / 100) ** 2) # / 100 för att omvandla cm till meter
          # weight / height x height
@@ -119,9 +121,7 @@ class DiseasePrediction:
         # filtrerar bort BMI under eller = 10, filtrerar bort BMI = 60 eller under
         self.df = self.df[(self.df["BMI"] >= 10) & (self.df["BMI"] <= 60)]
         self.df["BMI_category"] = self.df["BMI"].apply(categorize_bmi)
-        return self.df
-
-
+        
 
 
 
@@ -130,12 +130,13 @@ class DiseasePrediction:
         Q3 = self.df[["ap_hi", "ap_lo"]].quantile(0.75) 
         IQR = Q3 - Q1
 
-        lower_bound = Q1 - 1.5 * IQR
-        upper_bound = Q3 + 1.5 * IQR
+        lower_bound = Q1 - 2 * IQR
+        upper_bound = Q3 + 2 * IQR
 
         mask = ~((self.df[["ap_hi", "ap_lo"]] < lower_bound) | (self.df[["ap_hi", "ap_lo"]] > upper_bound)).any(axis=1)
-            
+        print(f"Antal rader före filtrering: {self.df.shape[0]}")    
         self.df = self.df[mask]
+        print(f"Antal rader efter filtrering: {self.df.shape[0]}")
             
         # Ville testa en annan metod för att ta bort outliers, svårt att avgöra gränserna själv.
         # Använde mig av samma metod i E03 logistic_regression.
@@ -146,16 +147,17 @@ class DiseasePrediction:
         def categorize_bp(ap_hi, ap_lo):
             if ap_hi < 90 or ap_lo < 60:
                 return "Low Blood Pressure"
-            elif 90 <= ap_hi <= 120 and 60 <= ap_lo <= 80:
+            elif ap_hi <= 120 and ap_lo <= 80:  # Normal BP
                 return "Normal Blood Pressure"
-            elif 120 <= ap_hi <= 129 and ap_lo < 80:
+            elif ap_hi <= 129 and ap_lo < 80:  # Elevated
                 return "Elevated Blood Pressure"
-            elif 130 <= ap_hi <= 139 or 80 <= ap_lo <= 89:
+            elif ap_hi <= 139 or ap_lo <= 89:  # Hypertension Stage 1
                 return "Hypertension Stage 1"
-            elif 140 <= ap_hi <= 179 or 90 <= ap_lo <= 119:
+            elif ap_hi <= 179 or ap_lo <= 119:  # Hypertension Stage 2
                 return "Hypertension Stage 2"
-            elif ap_hi >= 180 or ap_lo >= 120:
+            else:  # Om ap_hi >= 180 eller ap_lo >= 120
                 return "Hypertensive Crisis"
+
             
         self.df["Blood_pressure_category"] = self.df.apply(lambda row: categorize_bp(row["ap_hi"], row["ap_lo"]), axis=1)
         return self.df
@@ -174,7 +176,7 @@ class DiseasePrediction:
         aktivitet_andel = self.df.groupby("active")["cardio"].mean().reset_index()
 
 
-        def add_percentage_labels(ax, data): # ChatGPT4, prompt: Hjälp mig skapa procent direkt på varje bar. Fick denna funktionen som respons. Jag ville ha mer tydlighet i subplotsen.
+        def add_percentage_labels(ax, data): # ChatGPT-4o, prompt: Hjälp mig skapa procent direkt på varje bar. Fick denna funktionen som respons. Jag ville ha mer tydlighet i subplotsen.
             for p in ax.patches:
                 height = p.get_height()
                 percentage = height * 100
@@ -213,44 +215,129 @@ class DiseasePrediction:
 
 
 
-    def correlation_heat_map(self):
+    def correlation_heat_map(self): # Korrelationsmatris
         plt.figure(figsize=(10,5))
         sns.heatmap(self.df.corr(numeric_only=True), annot=True)
         plt.show()
 
 
     def copy_of_df(self):
+        self.df = pd.get_dummies(self.df, columns=["cholesterol"], drop_first=True)
         self.df1 = self.df.copy()
-        self.df1 = self.df.drop(columns=["ap_hi", "ap_lo", "height", "weight", "BMI"])
+        self.df1 = self.df1.drop(columns=["ap_hi", "ap_lo", "height", "weight", "BMI"])
         self.df1 = pd.get_dummies(self.df1, columns=["BMI_category", "Blood_pressure_category", "gender"],drop_first=True, dtype=int)
 
 
         self.df2 = self.df.copy()
-        self.df2 = self.df.drop(columns=["BMI_category", "Blood_pressure_category", "height", "weight"])
+        self.df2 = self.df2.drop(columns=["BMI_category", "Blood_pressure_category", "height", "weight"])
         self.df2 = pd.get_dummies(self.df2, columns=["gender"], drop_first=True, dtype=int)
 
-        print(self.df1.head())
-        print(self.df2.head())
+        # print(self.df1.head())
+        # print(self.df2.head())
     # skapa kopia av dataset här och utför one-hot encoding samt släng vissa kolumner
+        
+
+class ModelTraining:
+
+    def __init__(self, df):
+        self.df = df
+        self.best_models = {}
+        self.best_score = {}
+      
+        
+        
+    def split_data(self, test_size=0.3, val_size=0.5): # Splittar datan i träningsdata, valideringsdata och testdata. 
+        X = self.df.drop("cardio", axis=1)
+        y = self.df["cardio"]
+        print(self.df.shape)
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size)
+        X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, test_size=val_size)
+        return X_train, X_val, X_test, y_train, y_val, y_test
 
 
 
+    def scale_data(self, X_train, X_val, X_test):  
+        
+        scaler = StandardScaler()
+        X_train_scaled = scaler.fit_transform(X_train)
+        X_val_scaled = scaler.transform(X_val)
+        X_test_scaled = scaler.transform(X_test)
+        
+        
+
+        scaler = MinMaxScaler()
+        X_train_norm = scaler.fit_transform(X_train_scaled)
+        X_val_norm = scaler.transform(X_val_scaled)
+        X_test_norm = scaler.transform(X_test_scaled)
+            
+        
+
+        return X_train_norm, X_val_norm, X_test_norm
 
     
 
-    def confusion_matrix():
-        from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+    def hyper_tuning(self, model_name, X_train, y_train): # Hyperparameter tuning för att hitta bästa modellen
+        models = {
+            "LogisticRegression": (LogisticRegression(), { # Hyperparametrar för Logistic Regression
+                "C": [0.01, 0.1, 1, 10, 100],
+                "solver": ["liblinear", "saga"],
+                "max_iter": [1000, 5000, 10000]
+            }),
+            "RandomForest": (RandomForestClassifier(), { # Hyperparametrar för Random Forest
+                "n_estimators": [50, 100],
+                "max_depth": [10, 20],
+                "min_samples_split": [2, 5]
+            }),
+            "GradientBoosting": (GradientBoostingClassifier(), {  # Hyperparametrar för Gradient Boosting
+                "n_estimators": [50, 100, 200],  
+                "learning_rate": [0.01, 0.1, 0.2],  
+                "max_depth": [3, 5, 7] 
+            })
+        }
+
+       
+        model, param_grid = models[model_name] # Hämtar modell och parametrar för specifik modell
+        print(f"Hyperparameter tuning for {model_name}...")
+        grid_search = GridSearchCV(model, param_grid, cv=3, scoring="accuracy", n_jobs=-1) # cv=3 för att dela upp datan i 3 delar. Prövade med cv=5 men det tog alldeles för lång tid.
+        grid_search.fit(X_train, y_train) # Tränar modellen
         
-        cn = confusion_matrix() # sätt in y_test och y_pred här
-        ConfusionMatrixDisplay(cn).plot()
-        
-        return cn
-        
+        self.best_models[model_name] = grid_search.best_estimator_ # Sparar bästa modellen
+        print(f"Best model for {model_name}: {grid_search.best_params_}\n")
+
+    
+
+    def train_model(self, model_name, X_train, y_train, X_val, y_val): # Tränar modellen
+        model = self.best_models[model_name]
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_val)               # Predictar valideringsdatan
+        accuracy = accuracy_score(y_val, y_pred)    # Beräknar accuracy
+        self.best_score [model_name] = accuracy
+        print(f"{model_name} - Validation accuracy: {accuracy:.4f}\n")
+
+        return accuracy
 
 
 
-    def classification_report():
-        from sklearn.metrics import classification_report
+    def voting_classifier(self, X_train, y_train, X_val, y_val): # Skapar en Voting Classifier
+        estimators = [(name, model) for name, model in self.best_models.items()] # Hämtar de bästa modellerna
+        voting_clf = VotingClassifier(estimators=estimators, voting='hard') 
+
+         
+        voting_clf.fit(X_train, y_train) 
+        y_pred = voting_clf.predict(X_val)
+        accuracy = accuracy_score(y_val, y_pred)
+        print(f"Voting Classifier - Validation accuracy: {accuracy:.4f}\n")
+
+
+    def display_confusion_matrix_and_report(self, model_name, X_test, y_test): # confusion matrix och classification report
+        model = self.best_models[model_name]
+        y_pred = model.predict(X_test)
+        cm = confusion_matrix(y_test, y_pred) 
+        ConfusionMatrixDisplay(cm).plot()
+        plt.title(f"Confusion Matrix model {model}") 
+        print(classification_report(y_test, y_pred))
+        return cm
         
-        return print(classification_report()) # sätt in y_test och y_pred här
+
     

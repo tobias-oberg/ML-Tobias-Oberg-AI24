@@ -13,19 +13,6 @@ class DiseasePrediction:
     def __init__(self):
         self.df = self.load_data()
         
-       
-        
-
-    # def perform_eda(self):
-    #     # print(self.df.describe())
-    #     # print(self.df.info())
-    #     print(self.df.value_counts("cardio")) # Visar antalet positiva & negativa med hjärt och kärlsjukdom
-    #     self.piechart_cholesterol()
-    #     self.plot_age_distribution()
-    #     self.number_of_smokers()
-    #     self.weight_distribution()
-    #     self.height_distribution()
-    #     self.gender_cardio()
 
 
     def load_data(self):
@@ -67,19 +54,22 @@ class DiseasePrediction:
         print(f"Number of smokers: {smokers_percent[1]:.2f}%")
 
 
-    def weight_distribution(self):
-        plt.figure(figsize=(8,5))
-        sns.histplot(x="weight", data=self.df, hue="gender", bins=30, multiple="dodge")
-        plt.xlabel("Weight (kg)")
-        plt.title("Weight Distribution")
-        plt.show()
+    def weight_height_subplots(self):
+    
+        fig, ax = plt.subplots(1, 2, figsize=(16, 5))
 
+        
+        sns.histplot(x="weight", data=self.df, hue="gender", bins=30, multiple="dodge", ax=ax[0])
+        ax[0].set_xlabel("Weight (kg)")
+        ax[0].set_title("Weight Distribution")
 
-    def height_distribution(self):
-        plt.figure(figsize=(8,5))
-        sns.histplot(x="height", data=self.df, hue="gender", bins=30, multiple="dodge")
-        plt.xlabel("Height (cm)")
-        plt.title("Height Distribution")
+        # Andra subplot: Height Distribution
+        sns.histplot(x="height", data=self.df, hue="gender", bins=30, multiple="dodge", ax=ax[1])
+        ax[1].set_xlabel("Height (cm)")
+        ax[1].set_title("Height Distribution")
+
+        
+        plt.tight_layout()
         plt.show()
 
 
@@ -232,9 +222,7 @@ class DiseasePrediction:
         self.df2 = self.df2.drop(columns=["BMI_category", "Blood_pressure_category", "height", "weight"])
         self.df2 = pd.get_dummies(self.df2, columns=["gender"], drop_first=True, dtype=int)
 
-        # print(self.df1.head())
-        # print(self.df2.head())
-    # skapa kopia av dataset här och utför one-hot encoding samt släng vissa kolumner
+    # skapar kopia av dataset här och utför one-hot encoding samt släng vissa kolumner
         
 
 class ModelTraining:
@@ -319,15 +307,22 @@ class ModelTraining:
 
 
 
-    def voting_classifier(self, X_train, y_train, X_val, y_val): # Skapar en Voting Classifier
-        estimators = [(name, model) for name, model in self.best_models.items()] # Hämtar de bästa modellerna
+    def voting_classifier(self, X_train, y_train, X_val, y_val, X_test, y_test): # Skapar en Voting Classifier
+        for name, model in self.best_models.items(): # uppdaterar med de bästa parametrarna
+            model.set_params(**self.best_params[name])
+
+    # Skapa en lista med estimatorer namn och modell
+        estimators = [(name, model) for name, model in self.best_models.items()]
         voting_clf = VotingClassifier(estimators=estimators, voting='hard') 
 
-         
-        voting_clf.fit(X_train, y_train) 
-        y_pred = voting_clf.predict(X_val)
-        accuracy = accuracy_score(y_val, y_pred)
-        print(f"Voting Classifier - Validation accuracy: {accuracy:.4f}\n")
+        
+        X_full_train = np.vstack((X_train, X_val))  # https://www.geeksforgeeks.org/numpy-vstack-in-python/ 
+        y_full_train = np.hstack((y_train, y_val))  # Stackar två arrays med varandra vertikalt och horisentalt.
+
+        voting_clf.fit(X_full_train, y_full_train) 
+        y_pred = voting_clf.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        print(f"Voting Classifier - Test accuracy: {accuracy:.4f}\n")
 
 
     def display_confusion_matrix_and_report(self, model_name, X_test, y_test): # confusion matrix och classification report

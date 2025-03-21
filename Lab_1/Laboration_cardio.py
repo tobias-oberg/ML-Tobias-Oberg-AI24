@@ -288,14 +288,14 @@ class ModelTraining:
         model, param_grid = models[model_name] # Hämtar modell och parametrar för specifik modell
         print(f"Hyperparameter tuning for {model_name}...")
         grid_search = GridSearchCV(model, param_grid, cv=3, scoring="accuracy", n_jobs=-1) # cv=3 för att dela upp datan i 3 delar. Prövade med cv=5 men det tog alldeles för lång tid.
-        grid_search.fit(X_train, y_train) # Tränar modellen
+        grid_search.fit(X_train, y_train) 
         
         self.best_models[model_name] = grid_search.best_estimator_ # Sparar bästa modellen
         print(f"Best model for {model_name}: {grid_search.best_params_}\n")
 
     
 
-    def train_model(self, model_name, X_train, y_train, X_val, y_val): # Tränar modellen
+    def train_model(self, model_name, X_train, y_train, X_val, y_val): 
         model = self.best_models[model_name]
         model.fit(X_train, y_train)
         y_pred = model.predict(X_val)               # Predictar valideringsdatan
@@ -329,7 +329,7 @@ class ModelTraining:
         model = self.best_models[model_name]
         y_pred = model.predict(X_test)
         cm = confusion_matrix(y_test, y_pred) 
-        ConfusionMatrixDisplay(cm).plot()
+        ConfusionMatrixDisplay(cm, display_labels=["No", "Yes"]).plot()
         plt.title(f"Confusion Matrix model {model}") 
         print(classification_report(y_test, y_pred))
         return cm

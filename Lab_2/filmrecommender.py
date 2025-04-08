@@ -4,19 +4,17 @@ import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import streamlit as st
-import os
+import requests
 
 
 #my_api_key = "f43b87de9064ce5282fc85bc77c5d2cc"
 
-current_directory = os.getcwd()
-movies_path = os.path.join(current_directory, "movies.csv")
-tags_path = os.path.join(current_directory, "tags.csv")
+
 
 @st.cache_data # cachar data så att det inte laddas om varje gång
 def load_data():
-    movies = pd.read_csv(movies_path)
-    tags = pd.read_csv(tags_path)
+    movies = pd.read_csv("movies.csv")
+    tags = pd.read_csv("tags.csv")
     
     return movies, tags
 

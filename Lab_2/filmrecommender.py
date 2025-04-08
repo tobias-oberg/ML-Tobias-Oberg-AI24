@@ -13,11 +13,8 @@ import requests
 
 @st.cache_data # cachar data så att det inte laddas om varje gång
 def load_data():
-    movies_url = "https://github.com/tobias-oberg/ML-Tobias-Oberg-AI24/blob/main/Lab_2/movies.csv"
-    tags_url = "https://github.com/tobias-oberg/ML-Tobias-Oberg-AI24/blob/main/Lab_2/tags.csv"
-    
-    movies = pd.read_csv(movies_url)
-    tags_url = pd.read_csv(tags_url)
+    movies = pd.read_csv("movies.csv")
+    tags = pd.read_csv("tags.csv")
     
     return movies, tags
 

@@ -1,6 +1,7 @@
 # Körning av applikationen
 Länk till webapplikation: 
 skriv in streamlit run *filnamn.py* i terminalen för att köra den lokalt. 
+https://filmrecommender.streamlit.app/ # länk till deployade applikationen.
 
 
 

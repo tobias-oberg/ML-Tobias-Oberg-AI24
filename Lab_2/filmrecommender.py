@@ -6,12 +6,18 @@ from sklearn.metrics.pairwise import cosine_similarity
 import streamlit as st
 import requests
 
+
 #my_api_key = "f43b87de9064ce5282fc85bc77c5d2cc"
+
+
 
 @st.cache_data # cachar data så att det inte laddas om varje gång
 def load_data():
-    movies = pd.read_csv("movies.csv")
-    tags = pd.read_csv("tags.csv")
+    movies_url = "https://github.com/tobias-oberg/ML-Tobias-Oberg-AI24/blob/main/Lab_2/movies.csv"
+    tags_url = "https://github.com/tobias-oberg/ML-Tobias-Oberg-AI24/blob/main/Lab_2/tags.csv"
+    
+    movies = pd.read_csv(movies_url)
+    tags_url = pd.read_csv(tags_url)
     
     return movies, tags
 

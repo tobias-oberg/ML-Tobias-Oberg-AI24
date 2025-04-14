@@ -24,7 +24,7 @@ En annan begränsning som sker är att det inte finns någon beskrivning om film
 Jag använder pandas för datahantering, numpy för numeriska beräkningar, scikit-learn för tfidf och cosine similarity och streamlit för att köra applikationen på en websida då jag ville testa något nytt som liknar en dash-applikation. 
 
 Denna applikationen använder en maskininlärningsteknik som är vanlig inom NLP och behöver inte tränas med labels. Det är content-based filtering med fokus på likhetsmått mellan texter och då valdes TFIDF och Cosine similarity. euclidian distance testades men upplevdes sämre och mindre robust och är även känsligare för variansen av längderna på vektorerna. 
-Word2Vec och BERT kändes onödigt komplexa för detta problem. 
+Word2Vec och BERT kändes onödigt komplexa för detta problem samt att resultatet inte skulle göra en markant skillnad.  
 Med TFIDF, jämfört med bag-of-words så är vektorerna mer meningsfulla. Istället för att alla ord ska vägas lika så får mer unika termer högre vikt. 
 
 Att titta på genrer och taggar separat gav mindre relevanta förslag/resultat. Att inkludera titel testades men resultatet påverkades negativt. Det kan bero på att många titlar inte har semantisk information -- alltså en films titel beskriver oftast inte filmens genre till exempel, vilket leder till brus snarare än att vara till mer nytta. Dessutom är många titlar unika.
